@@ -1,57 +1,48 @@
-import { useEffect, useState } from 'react'
+import { useEffect } from 'react'
 import { ChevronLeftIcon } from '@heroicons/react/24/solid'
-import { Operation } from 'src/clients'
-import { useTdpClient } from 'src/contexts'
-import { Button } from 'src/components/commons'
-import { DeployPreview } from 'src/components/Deploy'
-import { NavigationBar } from 'src/components/Layout'
 import { toast } from 'react-toastify'
 import router from 'next/router'
 
+import { Button } from 'src/components/commons'
+import { DeployPreview } from 'src/components/Deploy'
+import { NavigationBar } from 'src/components/Layout'
+import {
+  useReconfigureApiV1DeployReconfigurePostMutation,
+  useReconfigureApiV1PlanReconfigurePostMutation,
+} from 'src/features/api/tdpApi'
+
 export default function ReconfigurePage() {
-  const [preview, setPreview] = useState<Operation[]>([])
-  const { planDeployReconfigure, reconfigureDeploy } = useTdpClient()
+  const [deployReconfigure, deployResult] =
+    useReconfigureApiV1DeployReconfigurePostMutation()
+  const [planReconfigure, planResult] =
+    useReconfigureApiV1PlanReconfigurePostMutation()
 
   useEffect(() => {
-    const fetchPreview = async () => {
-      try {
-        const operations = await planDeployReconfigure()
-        setPreview(operations)
-      } catch (e) {
-        console.error(e)
-      }
-    }
-    fetchPreview()
-  }, [planDeployReconfigure])
+    planReconfigure()
+  }, [])
 
-  async function reconfigureLaunch() {
-    try {
-      const deploymentLog = await reconfigureDeploy()
-      if (deploymentLog) {
-        toast.info(
-          `Deploy id: ${deploymentLog.id} ; redirecting to deploy log page...`
-        )
-        router.push(`/deploy/logs/${deploymentLog.id}`)
-      } else {
-        toast.error('Error: no response from server')
-      }
-    } catch (error) {
-      if (error.status) {
-        toast.error(`Error ${error.status} : ${error.statusText.toLowerCase()}`)
-      } else {
-        toast.error(String(error))
-      }
+  useEffect(() => {
+    if (deployResult.error) {
+      toast.error(String(deployResult.error))
     }
-  }
+    if (deployResult.data) {
+      toast.info(
+        `Deploy id: ${deployResult.data.id} ; redirecting to deploy log page...`
+      )
+      router.push(`/deploy/logs/${deployResult.data.id}`)
+    }
+  }, [deployResult])
+
+  if (planResult.isLoading) return <p>Loading...</p>
 
   return (
     <>
-      <div className="mt-2 mb-5 border-b border-gray-200 pb-5">
+      <div className="mb-5 mt-2 border-b border-gray-200 pb-5">
         <h1 className="text-3xl font-medium text-gray-900">
           Reconfigure cluster
         </h1>
       </div>
-      <DeployPreview operations={preview} />
+      {planResult.data && <DeployPreview operations={planResult.data} />}
       <NavigationBar className="sticky bottom-0 bg-white py-3">
         <Button
           as="Link"
@@ -61,13 +52,15 @@ export default function ReconfigurePage() {
           <ChevronLeftIcon className="h-5 w-5" />
           Back
         </Button>
-        <Button
-          as="button"
-          variant={'filled'}
-          onClick={() => reconfigureLaunch()}
-        >
-          Deploy Reconfigure
-        </Button>
+        {planResult.data && (
+          <Button
+            as="button"
+            variant={'filled'}
+            onClick={() => deployReconfigure()}
+          >
+            Deploy Reconfigure
+          </Button>
+        )}
       </NavigationBar>
     </>
   )
