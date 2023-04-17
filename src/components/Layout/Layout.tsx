@@ -18,7 +18,7 @@ export function DashboardLayout({ children }) {
             <TdpUiLogo width={100} height={40} />
           </div>
           <Menu />
-          <div className="mt-auto mb-3 p-2">
+          <div className="mb-3 mt-auto p-2">
             <UserInfos />
           </div>
         </aside>
